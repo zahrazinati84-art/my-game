@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پروژه جشنواره - سواد دیجیتال</title>
+    <style>
+        body {
+            margin: 0; padding: 0; display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; background: #fff0f6; font-family: 'Tahoma', sans-serif;
+            overflow: hidden; background-image: radial-gradient(#ffdeeb 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        .decoration { position: fixed; font-size: 30px; pointer-events: none; z-index: 1; animation: floatAnim 5s infinite ease-in-out; }
+        @keyframes floatAnim { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-30px) rotate(20deg); } }
+
+        .game-box {
+            position: relative; z-index: 10; width: 90%; max-width: 600px;
+            background: rgba(255, 255, 255, 0.95); padding: 30px;
+            border-radius: 40px; border: 8px solid #ff85c0;
+            box-shadow: 0 0 40px rgba(255, 133, 192, 0.4); text-align: center;
+        }
+
+        .screen { display: none; }
+        .active { display: block; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .image-container {
+            padding: 15px; background: white; border-radius: 25px;
+            border: 5px dashed #ffd700; cursor: pointer; margin-bottom: 20px;
+        }
+        img { max-width: 100%; height: auto; border-radius: 15px; display: block; margin: 0 auto; }
+
+        .educational-msg { font-size: 1.4rem; color: #d63384; font-weight: bold; margin: 20px 0; display: none; }
+
+        .btn {
+            padding: 12px 35px; font-size: 1.2rem; background: #ff85c0; color: white;
+            border: none; border-radius: 30px; cursor: pointer; transition: 0.3s;
+            margin-top: 10px; display: none;
+        }
+        .btn-start { display: inline-block; } /* برای صفحه اول */
+        .btn:hover { background: #ff4d94; transform: scale(1.05); }
+
+        .quiz-area { text-align: right; }
+        .question-text { font-size: 1.3rem; font-weight: bold; margin-bottom: 20px; }
+        .option-btn {
+            display: block; width: 100%; padding: 12px; margin: 10px 0;
+            background: white; border: 2px solid #ffdeeb; border-radius: 15px;
+            font-size: 1rem; cursor: pointer; text-align: right;
+        }
+        .correct { background-color: #70e000 !important; color: white; }
+        .wrong { background-color: #ff4d6d !important; color: white; }
+        .feedback-emoji { font-size: 2rem; margin-top: 10px; display: none; }
+
+        h1 { color: #d63384; }
+    </style>
+</head>
+<body>
+
+    <div class="decoration" style="top: 5%; left: 5%;">🌸</div>
+    <div class="decoration" style="top: 15%; right: 10%;">⭐</div>
+    <div class="decoration" style="bottom: 10%; left: 10%;">✨</div>
+
+    <div class="game-box">
+        
+        <!-- ۱. صفحه خوش‌آمدگویی -->
+        <div id="screen-welcome" class="screen active">
+            <h1>🌸 خوش آمدید! 🌸</h1>
+<p style="color: #ff4d94; font-weight: bold;">آموزگار: خانم زهرا زینتی</p>
+            <p>آماده هستید در دنیای دیجیتال یاد بگیرید؟</p>
+            <button class="btn btn-start" onclick="startJourney()">شروع ماجراجویی ✨</button>
+        </div>
+
+        <!-- ۲. صفحه تصاویر آموزشی -->
+        <div id="screen-stages" class="screen">
+            <div class="image-container" id="img-wrap" onclick="revealMessage()">
+                <img id="main-img" src="" alt="مرحله">
+            </div>
+            <div id="edu-msg" class="educational-msg"></div>
+            <button id="btn-next" class="btn" onclick="goToNext()">مرحله بعدی ➡️</button>
+        </div>
+
+        <!-- ۳. صفحه آزمون -->
+        <div id="screen-quiz" class="screen">
+            <div class="quiz-area">
+                <div id="q-text" class="question-text"></div>
+                <div id="options-box"></div>
+                <div id="emoji-feedback" class="feedback-emoji"></div>
+            </div>
+        </div>
+
+        <!-- ۴. صفحه پایان -->
+        <div id="screen-final" class="screen">
+            <h1>🏆 آفرین! 🏆</h1>
+            <p id="motivation-p"></p>
+            <button class="btn" style="display: inline-block;" onclick="showSuccess()">پایان بازی 🏁</button>
+        </div>
+
+        <!-- ۵. صفحه موفقیت نهایی -->
+        <div id="screen-success" class="screen">
+            <h1 style="color: #4caf50;">✅ موفقیت!</h1>
+            <p>بازی با موفقیت به پایان رسید.</p>
+        </div>
+
+    </div>
+
+    <!-- فایل‌های صوتی -->
+    <audio id="snd-bg" src="sounds/bg-music.mp3" loop></audio>
+    <audio id="snd-click" src="sounds/click.mp3"></audio>
+    <audio id="snd-correct" src="sounds/correct.mp3"></audio>
+
+    <script>
+        const stages = [
+            { img: 'images/class.jpg', msg: 'پسورد (رمز عبور) قوی، دنیای امن!' },
+            { img: 'images/library.jpg', msg: 'جستجوی هوشمند، انتخاب درست!' },
+            { img: 'images/lab.jpg', msg: 'فناوری را بشناس، خلاق باش!' },
+            { img: 'images/yard.jpg', msg: 'احترام بگذاریم، دنیای بهتری بسازیم!' },
+            { img: 'images/final.jpg', msg: 'ما با هم یاد گرفتیم! حالا وقت آزمون است.' }
+        ];
+
+        const quizData = [
+            { q: "کدام رمز عبور امن‌تر است؟", options: ["123456", "name123", "P@ssw0rd_2026", "تاریخ تولد"], correct: 2 },
+            { q: "برای پیدا کردن اطلاعات درست در اینترنت چه کنیم؟", options: ["هر چیزی را باور کنیم", "جستجو در سایت‌های معتبر", "فقط به پیام‌ها اعتماد کنیم", "هر چیزی را کپی کنیم"], correct: 1 },
+            { q: "استفاده خلاقانه از فناوری یعنی:", options: ["فقط بازی کردن", "یادگیری و حل مسائل", "تماشای ویدیو", "کپی کردن دیگران"], correct: 1 },
+            { q: "در فضای مجازی باید:", options: ["بی‌ادب باشیم", "کلمات تند بگوییم", "احترام و ادب را رعایت کنیم", "قوانین را بشکنیم"], correct: 2 }
+        ];
+
+        let stageIdx = 0;
+        let quizIdx = 0;
+
+        const sndBg = document.getElementById('snd-bg');
+        const sndClick = document.getElementById('snd-click');
+        const sndCorrect = document.getElementById('snd-correct');
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function startJourney() {
+            // پخش موسیقی با مدیریت خطا
+            sndBg.play().catch(err => console.log("Waiting for user interaction"));
+            
+            showScreen('screen-stages');
+            loadStage();
+        }
+
+        function loadStage() {
+            const data = stages[stageIdx];
+            const imgElement = document.getElementById('main-img');
+            imgElement.src = data.img;
+            
+            // مدیریت خطا در صورت نبود تصویر
+            imgElement.onerror = function() {
+                this.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+            };
+
+            document.getElementById('edu-msg').innerText = data.msg;
+            document.getElementById('edu-msg').style.display = 'none';
+            document.getElementById('btn-next').style.display = 'none';
+            document.getElementById('img-wrap').style.pointerEvents = 'auto';
+        }
+
+        function revealMessage() {
+            sndClick.play().catch(() => {});
+            document.getElementById('edu-msg').style.display = 'block';
+            document.getElementById('btn-next').style.display = 'inline-block';
+            document.getElementById('img-wrap').style.pointerEvents = 'none';
+        }
+
+        function goToNext() {
+            sndClick.play().catch(() => {});
+            stageIdx++;
+            if (stageIdx < stages.length) {
+                loadStage();
+            } else {
+                startQuiz();
+            }
+        }
+
+        function startQuiz() {
+            showScreen('screen-quiz');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const qData = quizData[quizIdx];
+            document.getElementById('q-text').innerText = qData.q;
+            const optionsBox = document.getElementById('options-box');
+            optionsBox.innerHTML = '';
+            document.getElementById('emoji-feedback').style.display = 'none';
+
+            qData.options.forEach((opt, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(i, btn);
+                optionsBox.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selectedIdx, btn) {
+            const correctIdx = quizData[quizIdx].correct;
+            const allBtns = document.querySelectorAll('.option-btn');
+            const feedback = document.getElementById('emoji-feedback');
+            
+            allBtns.forEach(b => b.disabled = true);
+
+            if (selectedIdx === correctIdx) {
+                btn.classList.add('correct');
+                feedback.innerText = "😊 عالی بود!";
+                feedback.style.color = "#70e000";
+                sndCorrect.play().catch(() => {});
+            } else {
+                btn.classList.add('wrong');
+                allBtns[correctIdx].classList.add('correct');
+                feedback.innerText = "😟 دوباره تلاش کن!";
+                feedback.style.color = "#ff4d6d";
+            }
+            feedback.style.display = 'block';
+
+            setTimeout(() => {
+                quizIdx++;
+                if (quizIdx < quizData.length) {
+                    loadQuestion();
+                } else {
+                    showFinal();
+                }
+            }, 2000);
+        }
+
+        function showFinal() {
+            showScreen('screen-final');
+            document.getElementById('motivation-p').innerText = "تو یک قهرمان دنیای دیجیتال هستی! ✨";
+        }
+
+        function showSuccess() {
+            showScreen('screen-success');
+        }
+    </script>
+</body>
+</html>
